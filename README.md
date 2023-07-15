@@ -4,20 +4,25 @@ Software for timer/Media playback device used in an escape room.
 
 # Funktionsübersicht
 
-Die Spielleitung kann mit einem Drehimpulsgeber zwischen 3 Spielzeiten wählen. Hierfür wird ein Menü auf dem OLED angezeigt. Mit dem Knopf des Drehimpulsgebers wird das Spiel gestartet. Alternativ kann das Spiel mit dem Intro-Knopf gestartet werden. Dieser erlaubt den Teilnehmenden weiterhin, jederzeit eine Intro-Nachricht mit dem DFplayer abzuspielen. Wird das Spiel gestartet, zeigt der OLED die verbleibende Spielzeit an. Während des Spiels kann mit dem Drehimpulsgeber die Lautstärke des DFplayer manipuliert werden. Die Teilnehmenden müssen herausfinden, welches der vier Kabel zertrennt werden muss, um das Gerät zu entschärfen. Wird das korrekte Kabel gekappt, wird eine Gratulationsnachricht abgespielt. Läuft die Zeit ab, oder wird das falsche Kabel gekappt, wird ein Explosionsgeräusch abgespielt. Wenn das Spiel gewonnen oder verloren wird, kann das Gerät mit den Knöpfen resettet werden. Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind. 
+Die Spielleitung kann mit einem Drehimpulsgeber zwischen 3 Spielzeiten wählen. Hierfür wird ein Menü auf dem OLED angezeigt. Das Symbol ">" zeigt an, welche Zeit ausgewählt ist. Mit dem Knopf des Drehimpulsgebers wird das Spiel gestartet. Alternativ kann das Spiel mit dem Intro-Knopf gestartet werden. Dieser erlaubt den Teilnehmenden weiterhin, jederzeit eine Intro-Nachricht mit dem DFplayer abzuspielen. Wird das Spiel gestartet, zeigt der OLED die verbleibende Spielzeit an. Während des Spiels kann mit dem Drehimpulsgeber die Lautstärke des DFplayer manipuliert werden. Die Teilnehmenden müssen herausfinden, welches der vier Kabel zertrennt werden muss, um das Gerät zu entschärfen. Wird das korrekte Kabel gekappt, wird eine Gratulationsnachricht abgespielt. Läuft die Zeit ab, oder wird das falsche Kabel gekappt, wird ein Explosionsgeräusch abgespielt. Wenn das Spiel gewonnen oder verloren wird, kann das Gerät mit den Knöpfen resettet werden. Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind - ansonsten wird das Spiel nicht gestartet, um Fehlern vorzubeugen. 
 
 # Verwendete Komponenten
 
-Arduino Nano 
-DFPlayer Mini
-Drehimpulsgeber mit Knopf - Breakout Board
-OLED Screen 128x64
-Knopf 
-PinHeader DuPont Style - Männlich 
-2x 1000k Resistor
-Micro-SD Karte 
-Schraubverbinder 5.08mm (4x2er)
-Lochrasterplatine 
+| Komponente                         | Anzahl | Funktion                                                                        | Optional? |
+|------------------------------------|--------|---------------------------------------------------------------------------------|-----------|
+| Arduino Nano                       | 1      | Microcontroller                                                                 |           |
+| DFPlayer Mini                      | 1      | Spielt MP3 von SD-Karte                                                         |           |
+| Drehimpulsgeber mit Button         | 1      | User Input (versch. Funktionen)                                                 |           |
+| OLED-Screen 128x64                 | 1      | User Output                                                                     |           |
+| Knopf (Vandalismustaster)          | 1      | Intro abspielen                                                                 |           |
+| 1k Resistor                        | 2      | Noise reduzieren                                                                |           |
+| Dupont Pinheader 1x5 - male        | 1      | Verbinden des Drehimpulsgebers                                                  | x         |
+| Dupont Pinheader 1x4 - male        | 1      | Verbinden des OLED-Screens                                                      | x         |
+| Dupont Pinheader 1x2 - male        | 2      | Verbinden des Introbuttons, Verbinden des Lautsprechers                         | x         |
+| Dupont Pinheader 1x8 - female      | 2      | Verbinden des DFPlayer                                                          | x         |
+| Lochrasterplatine                  | 1      | Hält andere Komponenten                                                         | x         |
+| Schraubterminals 5.08mm Grün 1x2er | 4      | Verbinden der zerschneidbaren Kabel - zu 2x4er zusammenstecken                  | x         |
+| Micro SD-Karte                     | 1      | Enthält Dateien zum Abspielen mit DFPlayer - Größe egal, muss nur 3 MP3s halten |           |
 
 # Verbindungen Arduino
 
