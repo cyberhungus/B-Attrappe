@@ -30,11 +30,41 @@ Wenn das Spiel gewonnen oder verloren wird, kann das Gerät mit den Knöpfen (In
 
 Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind - ansonsten wird das Spiel nicht gestartet, um Fehlern vorzubeugen. 
 
+## Vorbereitung 
+Alle Kabel vom rechten grünen Schraubterminal müssen mit dem linken grünen Schraubterminal verbunden werden. 
+
+Andernfalls wird der Start des Timers verhindert. 
+
+Die Reihenfolge der Verbindungen links ist hierbei unerheblich. 
+
+Das äußere rechte Schraubterminal (Siehe Platinenübersicht in diesem Dokument) ist für das Deaktivierungskabel vorgesehen. 
+
+An dieser Stelle sollte ein zum Spielfluss passendes Kabel (BLAU) verwendet werden. 
+
+Die Farbgebung der anderen Kabel kann nach Gutdünken erfolgen.
+
+Die Mikro-SD Karte muss präpariert werden, indem 3 Ordner mit den Namen "01", "02", "03" erstellt werden. 
+
+In diesen Ordnern ist jeweils eine Datei im mp3-Format abzuspeichern. 
+
+Diese muss den Dateinamen "0001.mp3" erhalten. 
+
+#### Achtung: Wird zur Vorbereitung der SD-Karte ein MAC oder Linux Computer benutzt, sind eventuell zusätzliche Schritte zu befolgen. Diese sind der DFPlayer-Dokumentation zu enehmen. Wir empfehlen die Verwendung eines Windows-Systems!
+
+Der Abspielzeitpunkt der MP3-Dateien ist der folgenden Tabelle zu entnehmen. 
+
+| Ordner | Abspielzeitpunkt |
+|--------|------------------|
+| 01     | Intro            |
+| 02     | Game Over        |
+| 03     | Game Won         |
+
+
 ## Verwendete Komponenten
 
 | Komponente                         | Anzahl | Funktion                                                                        | Optional? |
 |------------------------------------|--------|---------------------------------------------------------------------------------|-----------|
-| Arduino Nano                       | 1      | Microcontroller                                                                 |           |
+| Arduino Nano                       | 1      | Microcontroller (es können andere Microcontroller verwendet werden)                                                                |           |
 | DFPlayer Mini                      | 1      | Spielt MP3 von SD-Karte                                                         |           |
 | Drehimpulsgeber mit Button         | 1      | User Input (versch. Funktionen)                                                 |           |
 | OLED-Screen 128x64                 | 1      | User Output                                                                     |           |
@@ -81,5 +111,5 @@ Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind - ansonst
 ## Ablaufplan
 <img src="./Ablaufplan.svg">
 
-## Ablaufplan
+## Platinenübersicht
 <img src="./Platinenoverview.svg">
