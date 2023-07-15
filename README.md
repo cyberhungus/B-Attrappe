@@ -43,7 +43,7 @@ An dieser Stelle sollte ein zum Spielfluss passendes Kabel (BLAU) verwendet werd
 
 Die Farbgebung der anderen Kabel kann nach Gutdünken erfolgen.
 
-Die Mikro-SD Karte muss präpariert werden, indem 3 Ordner mit den Namen "01", "02", "03" erstellt werden. 
+Die Mikro-SD Karte muss präpariert werden, indem drei Ordner mit den Namen "01", "02", "03" erstellt werden. 
 
 In diesen Ordnern ist jeweils eine Datei im mp3-Format abzuspeichern. 
 
