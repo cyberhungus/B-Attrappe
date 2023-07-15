@@ -26,7 +26,7 @@ Wird das korrekte Kabel gekappt, wird eine Gratulationsnachricht abgespielt.
 
 Läuft die Zeit ab, oder wird das falsche Kabel gekappt, wird ein Explosionsgeräusch abgespielt.
 
-Wenn das Spiel gewonnen oder verloren wird, kann das Gerät mit den Knöpfen resettet werden. 
+Wenn das Spiel gewonnen oder verloren wird, kann das Gerät mit den Knöpfen (Intro oder Encoder) resettet werden. 
 
 Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind - ansonsten wird das Spiel nicht gestartet, um Fehlern vorzubeugen. 
 
