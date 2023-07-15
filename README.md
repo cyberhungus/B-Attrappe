@@ -80,3 +80,6 @@ Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind - ansonst
 
 ## Ablaufplan
 <img src="./Ablaufplan.svg">
+
+## Ablaufplan
+<img src="./Platinenoverview.svg">
