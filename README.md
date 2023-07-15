@@ -79,6 +79,4 @@ Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind - ansonst
 | DFPlayer SPK_2 | Pinheader Lautsprecher | Bei Lautsprecher ist Polarität egal |
 
 ## Ablaufplan
-
-![Alt text](./Ablaufplan.svg)
 <img src="./Ablaufplan.svg">
