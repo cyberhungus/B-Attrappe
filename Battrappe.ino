@@ -1,38 +1,42 @@
-//Library für Encoder
-#include <Encoder.h>
+
 //Libraries für OLED
 #include <SPI.h>
 #include <Wire.h>
-#include <Adafruit_GFX.h>
-#include <Adafruit_SSD1306.h>
+
 //library für dfplayer mini
-#include <DFMiniMp3.h>
-#include <SoftwareSerial.h>
-//definiere die vom dfplayer benötigte mp3notify klasse
-class Mp3Notify;
+#include "Arduino.h"
+#include "SoftwareSerial.h"
+#include "DFRobotDFPlayerMini.h"
+#include <U8g2lib.h>
 
-//definiere OLED-Größe
-#define SCREEN_WIDTH 128
-#define SCREEN_HEIGHT 64
-//kein resetpin an oled
-#define OLED_RESET     -1
+//erstelle dfplayer objekt und softwareSerial
+SoftwareSerial mySoftwareSerial(11, 12); // RX, TX
+DFRobotDFPlayerMini myDFPlayer;
+void printDetail(uint8_t type, int value);
 
-//erstelle Oled display um das display zu steuern
-Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
-
-//Encoder Objekt für einfaches auseles des Encoders
-Encoder myEncoder(2, 3);
 //Pin zum auslesen des EncoderButtons
-int encoderButtonPin = 4;
+const int encoderButtonPin = 10;
 //Pin zum auslesen des EncoderButtons
-int introButtonPin = 5;
+const int introButtonPin = 5;
+// Rotary Encoder Inputs
+const int CLK = 2;
+const int DT  = 3;
+
+//variablen für den Encoder
+int counter = 0;
+int currentStateCLK;
+int lastStateCLK;
+
 //fake kabel pins
-int fakeCables[] = {5, 6, 7};
+int fakeCables[] = {9, 8, 7};
 int fakeCablesLength = 3;
 //deaktivierungskabel pins
-int deactivateCable = 8;
+int deactivateCable = 6;
+
+
 //welche Minutenwerte stehen zur auswahl?
-int minuteValues[] = {30, 45, 60};
+int minuteValues[] = {1, 20, 30};
+//Wie viele minutenwerte sind es?
 int minuteValuesLength = 3;
 //welcher minutenwert ist gerade ausgewählt?
 int currentSelection = 0;
@@ -45,68 +49,124 @@ long endTime = 0 ;
 bool gameOverState = false;
 bool gameWonState = false;
 //hält die volume
-int vol = 25;
+int vol = 30;
 //wurde die Vol vor kurzem verändert, soll ein spezieller screen gezeigt werden
 bool volChanged = false;
 // wann endet die anzeige der time anzeige
 long volChangeEnd;
 //wie lange wird die volchange message gezeigt
 int volChangeDur = 1500;
-//dfplayer
-SoftwareSerial secondarySerial(10, 11); // RX, TX
-typedef DFMiniMp3<SoftwareSerial, Mp3Notify> DfMp3;
-DfMp3 dfmp3(secondarySerial);
+
+//instanziiere objekt für display
+U8G2_SSD1306_128X64_NONAME_1_SW_I2C u8g2(U8G2_R0, /* clock=*/ SCL, /* data=*/ SDA, /* reset=*/ U8X8_PIN_NONE);   // All Boards without Reset of the Display
+
+
+
+
+
+//wenn alle kabel korrekt verbunden sind, ist cablestate true, sonst false
+bool cableState = true;
 
 
 void setup() {
+
   Serial.begin(115200);
   Serial.println("B-Attrappe von MM 2023");
+
+  u8g2.begin();
+
   pinMode(encoderButtonPin, INPUT_PULLUP);
   pinMode(introButtonPin, INPUT_PULLUP);
+
   for (int i = 0; i < fakeCablesLength; i++) {
-    pinMode(fakeCables[i], INPUT);
+    pinMode(fakeCables[i], INPUT_PULLUP);
   }
-  pinMode(deactivateCable, INPUT);
-  dfmp3.begin();
-  dfmp3.setVolume(vol);
+  pinMode(deactivateCable, INPUT_PULLUP);
+
+
+  pinMode(CLK, INPUT);
+  pinMode(DT, INPUT);
+  lastStateCLK = digitalRead(CLK);
+
+  attachInterrupt(digitalPinToInterrupt(2), updateEncoder, CHANGE);
+  attachInterrupt(digitalPinToInterrupt(3), updateEncoder, CHANGE);
+
+  //starte softwareserial und dfplayer
+  mySoftwareSerial.begin(9600);
+  if (!myDFPlayer.begin(mySoftwareSerial)) {
+    //halte system an wenn dfplayer nicht findbar
+    Serial.println("DFPLAYER error");
+    //zeige infos dazu auf dem screen
+    showDFPlayerError();
+    while (1);
+  }
+  Serial.println(F("DFPlayer Mini online."));
+
+  myDFPlayer.volume(vol);
+
+
 
 
 }
 long oldPosition  = -999;
 
 void loop() {
+  //zeige sachen auf dem Display an
+
+  u8g2.firstPage();
+  do {
+    showDisplay();
+  } while (u8g2.nextPage());
+
+  //Prüfe werte des Drehimpulsgebers
   readEncoder();
+  //schaue ob ein knopf gedrückt wurde
   readButtons();
+  //gucke, welche zeitbasierten funktionen
   checkTimes();
+  //prüfe ob die kabel durchgeschnitten wurden
   checkCables();
-  showDisplay();
+
 
 
 }
 
+//guckt ob alle kabel verbunden sind bzw welche kabel nicht verbunden sind
 void checkCables () {
-  int result;
+
+  //Cablestate wird true oder false, je nachdem ob alle kabel verbunden sind
+  //wir machen das hier, damit das hauptmenü anzeigen kann ob das system bereit ist
+  cableState = allCablesConnected();
+
+  int cableres;
   //checke jedes fake kabel
   for (int i = 0; i < fakeCablesLength; i++) {
     //lese den pin
-    result = digitalRead(fakeCables[i]);
-
-    if (result == LOW) {
+    cableres = digitalRead(fakeCables[i]);
+    //wenn fake-kabel durchtrennt dann game over
+    if (cableres == HIGH) {
       if (timerStarted) {
         gameOver();
+        Serial.println("Fake cable severed");
 
       }
     }
   }
-  result = digitalRead(fakeCables);
-  if (result == LOW) {
+  //checke deaktivierungskabel
+  cableres = digitalRead(deactivateCable);
+  //wenn deaktivierungskabel getrennt dann gewonnen
+  if (cableres == HIGH) {
     if (timerStarted) {
       gameWon();
+      Serial.println("Correct cable severed");
 
     }
   }
+
 }
 
+//gibt wahr zurück, wenn alle kabel verbunden sind
+//gibt falsch zurück, wenn nicht alle kabel verbunden
 bool allCablesConnected() {
   int result = 0;
   //checke jedes fake kabel
@@ -114,19 +174,28 @@ bool allCablesConnected() {
     //lese den pin
     result = digitalRead(fakeCables[i]);
 
-    if (result == LOW) {
+    Serial.print("Fake at: ");
+    Serial.print(fakeCables[i]);
+    Serial.print(" - ");
+    Serial.println(result);
+    if (result == HIGH) {
       if (timerStarted) {
         result++;
       }
     }
   }
-  result = digitalRead(fakeCables);
-  if (result == LOW) {
+  result = digitalRead(deactivateCable);
+  Serial.print("Real  at: ");
+  Serial.print(deactivateCable);
+  Serial.print(" - ");
+  Serial.println(result);
+  if (result == HIGH) {
     if (timerStarted) {
       result++;
     }
   }
   if (result != 0) {
+
     return false;
   }
   else {
@@ -137,12 +206,15 @@ bool allCablesConnected() {
 
 
 void readEncoder() {
+
   //leseEncoder
-  long newPosition = myEncoder.read();
+  long newPosition = counter;
+
   //wenn position anders.
   if (newPosition != oldPosition) {
     //wenn kleiner als letze
     if (newPosition < oldPosition) {
+      Serial.println("Kleiner");
       //wenn timer gestarted inkrementiere currentselection - wählt menüitems aus
       if (!timerStarted) {
         currentSelection++;
@@ -154,7 +226,8 @@ void readEncoder() {
       }
     }
     //wenn position größer als letze
-    else {
+    else if (newPosition > oldPosition) {
+      Serial.println("grosser");
       //wenn timer gestartet dekrementiere currentselection - wählt menüitems aus
       if (!timerStarted) {
         currentSelection--;
@@ -172,6 +245,7 @@ void readEncoder() {
   else if (currentSelection >= minuteValuesLength) {
     currentSelection = 0;
   }
+  oldPosition = newPosition;
 }
 
 //prüft verschiedene Zeiten
@@ -205,10 +279,11 @@ void increaseVol() {
   if (vol < 30) {
 
     vol++;
-    dfmp3.setVolume(vol);
+    myDFPlayer.volume(vol);
     volChanged = true;
     volChangeEnd = millis() + volChangeDur;
-    Serial.println("Lautstarke geandert: " + vol);
+    Serial.print("Lautstarke geandert: " );
+    Serial.println(vol);
 
   }
 }
@@ -216,60 +291,74 @@ void increaseVol() {
 void decreaseVol() {
   if (vol > 5) {
     vol--;
-    dfmp3.setVolume(vol);
+    myDFPlayer.volume(vol);
     volChanged = true;
     volChangeEnd = millis() + volChangeDur;
-    Serial.println("Lautstarke geandert: " + vol);
+    Serial.print("Lautstarke geandert: " );
+    Serial.println(vol);
   }
 }
 
+//aufgerufen wenn falsches kabel getrennt oder zeit abgelaufen
 void gameOver() {
   if (!gameOverState && !gameWonState) {
+    //  fillcircle();
     gameOverState = true;
     playBoom();
+    Serial.println("game over");
   }
 }
-
+//aufgerufen wenn korrektes kabel getrennt
 void gameWon() {
   if (!gameOverState && !gameWonState) {
-    gameOverState = true;
+    gameWonState = true;
     playFanfare();
+    Serial.println("game won");
   }
 }
 
-
+//diese funktion reagiert auf drücken des encoders oder des intro buttons
 void readButtons() {
-  if (!gameOverState || !gameWonState) {
+  int introRes = digitalRead(introButtonPin);
 
-    //nur button eingaben akkzeptieren wenn wenn
-    if (!timerStarted && allCablesConnected()) {
-      if (digitalRead(encoderButtonPin) == LOW) {
+
+  int encRes = digitalRead(encoderButtonPin);
+  long timestamp = millis();
+
+  //    Serial.print("EncoderButton:");
+  //    Serial.println(encRes);
+  //      Serial.print("Intro:");
+  //    Serial.println(introRes);
+  if (!gameOverState && !gameWonState) {
+
+    //nur button eingaben akkzeptieren wenn wenn timer gestartet und alle Kabel korrekt verbunden
+    if (!timerStarted && cableState) {
+      //eingabe zum timer start mit dem encoder-knopf
+      if (encRes == LOW) {
         timerStarted = true;
-        endTime = millis() + minuteValues[currentSelection] * 60 * 1000;
+        endTime = timestamp + (minuteValues[currentSelection] * 60000);
         Serial.print("Timer gestartet um: ");
-        Serial.print(millis());
+        Serial.print(timestamp);
         Serial.print(". Timer gestartet mit: ");
-        Serial.println( minuteValues[currentSelection] + " MIN");
+        Serial.print( minuteValues[currentSelection] );
         Serial.print("Ende: ");
         Serial.println(endTime);
       }
-
-      if (digitalRead(introButtonPin) == LOW) {
+      //eingabe zum timer start mit dem Intro knopf
+      if (introRes == LOW) {
         timerStarted = true;
-        endTime = millis() + minuteValues[currentSelection] * 60 * 1000;
+        endTime = timestamp + (minuteValues[currentSelection] * 60000);
         Serial.print("Timer + Intro abspielen gestartet um: ");
-        Serial.print(millis());
-        Serial.print(". Timer gestartet mit: ");
-        Serial.println( minuteValues[currentSelection] + " MIN");
-        Serial.print("Ende: ");
-        Serial.println(endTime);
+        Serial.print(timestamp);
+
         playIntro();
       }
     }
     else {
-      if (digitalRead(introButtonPin) == LOW) {
+      //wenn timer schon läuft spielt der intro knopf nur das intro
+      if (introRes == LOW) {
         Serial.print(" Intro abspielen gestartet um: ");
-        Serial.print(millis());
+        Serial.print(timestamp);
         Serial.print("Ende: ");
         Serial.println(endTime);
         playIntro();
@@ -278,98 +367,178 @@ void readButtons() {
   }
   //wenn gameover oder gamewon resetten wir die variablen dafür, und somit das system
   else {
-    if (digitalRead(encoderButtonPin) == LOW) {
+    if (encRes == LOW) {
       gameOverState = false;
       gameWonState = false;
+      timerStarted = false;
+      Serial.println("reset");
+      showReset();
+      delay(2000);
     }
 
-    if (digitalRead(introButtonPin) == LOW) {
+    if (introRes == LOW) {
+
       gameOverState = false;
       gameWonState = false;
+      timerStarted = false;
+      Serial.println("reset");
+      showReset();
+      delay(2000);
     }
   }
 }
+
+//diese funktion regelt die anzeige auf dem Bildschirm
 void showDisplay() {
-  display.clearDisplay();
-  if (!gameOverState || !gameWonState) {
-    if (!timerStarted) {
-      //zeichne minutenwert optionen und auswahlpfeil
-      for (int i = 0; i < minuteValuesLength; i++) {
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(20, i * 10 );
-        display.setTextSize(0.5);
-        display.print(minuteValues[i] + "MIN");
-      }
-      display.setCursor(0, currentSelection * 10 );
-      display.setTextSize(0.5);
-      display.print(" > ");
-      if (!allCablesConnected()) {
-        display.setCursor(0, 50 );
-        display.setTextSize(0.5);
-        display.print("!KABEL CHECKEN!");
-      }
-      else {
-        display.setCursor(0, 50 );
-        display.setTextSize(0.5);
-        display.print("KABEL OKAY");
-      }
+  //zeige splashscreen wenn system gestartet wird
+  if (millis() < 3000) {
+    showSplash();
+  } else {
+    //wenn das spiel nicht im gamover oder gewon zustand ist
+    if (!gameOverState && !gameWonState) {
+      //wenn der timer nicht gestartet ist, zeige hauptmenü
+      if (!timerStarted) {
+        //zeichne minutenwert optionen
+        for (int i = 0; i < minuteValuesLength; i++) {
 
-    }
-    else {
-      if (!volChanged) {
-        long remTime = endTime - millis();
-        long remMinutes = remTime / 60000;
-        long remSeconds = remTime / 1000 % 60;
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(0, 0);
-        display.setTextSize(2);
-        display.print(remMinutes + "MIN");
-        display.setCursor(0, SCREEN_HEIGHT / 2);
-        display.setTextSize(2);
-        display.print(remSeconds + "SEK");
-      }
-      else {
-        display.setTextColor(SSD1306_WHITE);
-        display.setCursor(0, 0);
-        display.setTextSize(2);
-        display.print("VOL: " + vol);
-      }
-    }
-  }
-  else if (gameOverState && !gameWonState) {
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.setTextSize(2);
-    display.print("GEWONNEN");
-  }
-  else if (gameWonState && !gameOverState) {
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.setTextSize(2);
-    display.print("VERLOREN!");
-  }
-  else if (gameWonState && gameOverState) {
-    display.setTextColor(SSD1306_WHITE);
-    display.setCursor(0, 0);
-    display.setTextSize(2);
-    display.print("ERROR!");
-  }
+          u8g2.setFont(u8g2_font_ncenB10_tr);
+          u8g2.setCursor(10, 20 + (i * 20));
+          u8g2.print(minuteValues[i]);
 
-  display.display();
+        }
+        //zeichne auswahlpfeil an der richtigen position, basierend auf der currentselection variabel
+        u8g2.setCursor(0, 20 + ( currentSelection * 20));
+        u8g2.print(">");
+
+        //zeige an, ob die Kabel korrekt verbunden sind
+        if (!cableState) {
+          u8g2.setFont(u8g2_font_5x7_tr);
+
+          u8g2.setCursor(40, 60 );
+          u8g2.print("KABELFEHLER");
+        }
+        else {
+          u8g2.setFont(u8g2_font_5x7_tr);
+
+          u8g2.setCursor(40, 60 );
+          u8g2.print("KABEL OKAY");
+        }
+
+      }
+      //wenn der timer gestartet wurde, zeige die verbleibende zeit an
+      else {
+        if (!volChanged) {
+          long remTime = endTime - millis();
+          long remMinutes = remTime / 60000;
+          long remSeconds = remTime / 1000 % 60;
+          u8g2.setFont(u8g2_font_7Segments_26x42_mn);
+          u8g2.setCursor(0, 42);
+          u8g2.print(remMinutes);
+          u8g2.setCursor(58, 42);
+          u8g2.print(":");
+          u8g2.setCursor(70, 42);
+          u8g2.print(remSeconds);
+        }
+        //es sei denn, die lautstärke wurde kürzlich geändert: dann zeige lautstärke an
+        else {
+          u8g2.setFont(u8g2_font_ncenB10_tr);
+          u8g2.drawStr(0, 20 ,  "VOL");
+          u8g2.drawStr(64, 20 ,  String(vol).c_str());
+        }
+      }
+    }
+    //folgender Code zeigt informationen an, wenn spiel gewonnen oder verloren
+    else if (gameOverState && !gameWonState) {
+      u8g2.setFont(u8g2_font_ncenB10_tr);
+      u8g2.drawStr(0, 30 , "Game Over");
+      u8g2.setFont(u8g2_font_5x7_tr);
+      u8g2.drawStr(0, 50 , "Knopf zum Reset ");
+    }
+    else if (gameWonState && !gameOverState) {
+      u8g2.setFont(u8g2_font_ncenB10_tr);
+      u8g2.drawStr(0, 20 , "GEWONNEN!");
+      u8g2.setFont(u8g2_font_5x7_tr);
+      u8g2.drawStr(0, 40 , "Saubere Arbeit!  ");
+      u8g2.drawStr(0, 60 , "Knopf zum Reset ");
+    }
+    //wenn spiel gleichzeitig gewonnen und verloren ist, zeige ERROR an
+    else if (gameWonState && gameOverState) {
+      u8g2.setFont(u8g2_font_ncenB10_tr);
+      u8g2.drawStr(0, 30 , "ERROR");
+      u8g2.setFont(u8g2_font_5x7_tr);
+      u8g2.drawStr(0, 50 , "Knopf zum Reset ");
+    }
+
+
+
+
+
+  }
 }
 
+//playfunktionen kapseln das abspielen bestimmter tracks auf dem DFPlayer
 void playIntro() {
-  dfmp3.stop();
-  delay(300);
-  dfmp3.playMp3FolderTrack(1);
+  myDFPlayer.play(1);
 }
 void playBoom() {
-  dfmp3.stop();
-  delay(100);
-  dfmp3.playMp3FolderTrack(2);
+  myDFPlayer.play(2);
 }
 void playFanfare() {
-  dfmp3.stop();
-  delay(100);
-  dfmp3.playMp3FolderTrack(3);
+  myDFPlayer.play(3);
+}
+
+//diese funktion wird als callback aufgerufen, wenn der drehimpulsgeber bewegt wird
+//sie regelt die interne logik des encoders
+void updateEncoder() {
+  // Read the current state of CLK
+  currentStateCLK = digitalRead(CLK);
+
+  // If last and current state of CLK are different, then pulse occurred
+  // React to only 1 state change to avoid double count
+  if (currentStateCLK != lastStateCLK  && currentStateCLK == 1) {
+
+    // If the DT state is different than the CLK state then
+    // the encoder is rotating CCW so decrement
+    if (digitalRead(DT) != currentStateCLK) {
+      counter --;
+
+    } else {
+      // Encoder is rotating CW so increment
+      counter ++;
+
+    }
+
+
+    // Serial.print(" | Counter: ");
+    //Serial.println(counter);
+  }
+
+  // Remember last CLK state
+  lastStateCLK = currentStateCLK;
+}
+
+void showSplash() {
+ 
+  u8g2.setFont(u8g2_font_ncenB10_tr);
+  u8g2.drawStr(0, 24, "Bomb!");
+  u8g2.drawStr(0, 48, "MM 2023");
+
+}
+void showReset() {
+  
+  u8g2.setFont(u8g2_font_ncenB10_tr);
+  u8g2.drawStr(0, 24, "RESET!");
+  u8g2.drawStr(0, 48, "MM 2023");
+}
+
+void showDFPlayerError() {
+  u8g2.firstPage();
+  do {
+    u8g2.setFont(u8g2_font_ncenB10_tr);
+    u8g2.drawStr(0, 20 , "ERROR");
+    u8g2.setFont(u8g2_font_5x7_tr);
+    u8g2.drawStr(0, 30 , "DFPlayer-Problem ");
+    u8g2.drawStr(0, 30 , "Checke SDCard");
+  } while (u8g2.nextPage());
+
 }
