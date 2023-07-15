@@ -5,15 +5,29 @@ Software for a combined timing- and media playback device used in an Escape Room
 ## Funktionsübersicht
 
 Die Spielleitung kann mit einem Drehimpulsgeber zwischen 3 Spielzeiten wählen. 
+
 Hierfür wird ein Menü auf dem OLED angezeigt. 
+
 Das Symbol ">" zeigt an, welche Zeit ausgewählt ist. 
+
 Mit dem Knopf des Drehimpulsgebers wird das Spiel gestartet. 
+
 Alternativ kann das Spiel mit dem Intro-Knopf gestartet werden. 
+
 Dieser erlaubt den Teilnehmenden weiterhin, jederzeit eine Intro-Nachricht mit dem DFplayer abzuspielen. 
+
 Wird das Spiel gestartet, zeigt der OLED die verbleibende Spielzeit an. 
-Während des Spiels kann mit dem Drehimpulsgeber die Lautstärke des DFplayer manipuliert werden. Die Teilnehmenden müssen herausfinden, welches der vier Kabel zertrennt werden muss, um das Gerät zu entschärfen. 
+
+Während des Spiels kann mit dem Drehimpulsgeber die Lautstärke des DFplayer manipuliert werden.
+
+Die Teilnehmenden müssen herausfinden, welches der vier Kabel zertrennt werden muss, um das Gerät zu entschärfen. 
+
 Wird das korrekte Kabel gekappt, wird eine Gratulationsnachricht abgespielt. 
-Läuft die Zeit ab, oder wird das falsche Kabel gekappt, wird ein Explosionsgeräusch abgespielt. Wenn das Spiel gewonnen oder verloren wird, kann das Gerät mit den Knöpfen resettet werden. 
+
+Läuft die Zeit ab, oder wird das falsche Kabel gekappt, wird ein Explosionsgeräusch abgespielt.
+
+Wenn das Spiel gewonnen oder verloren wird, kann das Gerät mit den Knöpfen resettet werden. 
+
 Das Gerät prüft vor Spielstart, ob alle Kabel korrekt verbunden sind - ansonsten wird das Spiel nicht gestartet, um Fehlern vorzubeugen. 
 
 ## Verwendete Komponenten
