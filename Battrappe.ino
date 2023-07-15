@@ -35,7 +35,7 @@ int deactivateCable = 6;
 
 
 //welche Minutenwerte stehen zur auswahl?
-int minuteValues[] = {1, 20, 30};
+int minuteValues[] = {30,45,60};
 //Wie viele minutenwerte sind es?
 int minuteValuesLength = 3;
 //welcher minutenwert ist gerade ausgewählt?
