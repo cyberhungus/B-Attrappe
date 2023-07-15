@@ -184,6 +184,7 @@ bool allCablesConnected() {
       }
     }
   }
+  //checke deaktivierungskabel
   result = digitalRead(deactivateCable);
   Serial.print("Real  at: ");
   Serial.print(deactivateCable);
@@ -478,13 +479,13 @@ void showDisplay() {
 
 //playfunktionen kapseln das abspielen bestimmter tracks auf dem DFPlayer
 void playIntro() {
-  myDFPlayer.play(1);
+  myDFPlayer.playFolder(01, 01);
 }
 void playBoom() {
-  myDFPlayer.play(2);
+  myDFPlayer.playFolder(02, 01);
 }
 void playFanfare() {
-  myDFPlayer.play(3);
+  myDFPlayer.playFolder(03, 01);
 }
 
 //diese funktion wird als callback aufgerufen, wenn der drehimpulsgeber bewegt wird
