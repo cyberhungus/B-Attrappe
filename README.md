@@ -113,3 +113,10 @@ Der Abspielzeitpunkt der MP3-Dateien ist der folgenden Tabelle zu entnehmen.
 
 ## Platinenübersicht
 <img src="./Platinenoverview.svg">
+
+## Platinenübersicht Alternativ
+
+Die 2 gebauten Platinen weichen leicht voneinander ab. 
+Dies ist die Übersicht der kleineren Platine
+Durch einen Lötfehler sind hier Pin 11 und 12 vertauscht. 
+<img src="./PlatineALternativ.svg">
