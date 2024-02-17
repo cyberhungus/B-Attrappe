@@ -1,4 +1,3 @@
-
 //Libraries für OLED
 #include <SPI.h>
 #include <Wire.h>
@@ -10,7 +9,7 @@
 #include <U8g2lib.h>
 
 //erstelle dfplayer objekt und softwareSerial
-SoftwareSerial mySoftwareSerial(11, 12); // RX, TX
+SoftwareSerial mySoftwareSerial(11,12  ); // RX, TX
 DFRobotDFPlayerMini myDFPlayer;
 void printDetail(uint8_t type, int value);
 
@@ -35,9 +34,9 @@ int deactivateCable = 6;
 
 
 //welche Minutenwerte stehen zur auswahl?
-int minuteValues[] = {30,45,60};
+int minuteValues[] = {30, 45, 60, 1};
 //Wie viele minutenwerte sind es?
-int minuteValuesLength = 3;
+int minuteValuesLength = 4;
 //welcher minutenwert ist gerade ausgewählt?
 int currentSelection = 0;
 //wurde der timer gestartet?
@@ -107,16 +106,13 @@ void setup() {
 
 
 
+
 }
 long oldPosition  = -999;
 
 void loop() {
   //zeige sachen auf dem Display an
-
-  u8g2.firstPage();
-  do {
-    showDisplay();
-  } while (u8g2.nextPage());
+  readButtons();
 
   //Prüfe werte des Drehimpulsgebers
   readEncoder();
@@ -126,8 +122,16 @@ void loop() {
   checkTimes();
   //prüfe ob die kabel durchgeschnitten wurden
   checkCables();
-
-
+  readButtons();
+    //Prüfe werte des Drehimpulsgebers
+  readEncoder();
+  u8g2.firstPage();
+  do {
+    showDisplay();
+  } while (u8g2.nextPage());
+  readButtons();
+    //Prüfe werte des Drehimpulsgebers
+  readEncoder();
 
 }
 
@@ -168,6 +172,7 @@ void checkCables () {
 //gibt wahr zurück, wenn alle kabel verbunden sind
 //gibt falsch zurück, wenn nicht alle kabel verbunden
 bool allCablesConnected() {
+  int checksum = 0;
   int result = 0;
   //checke jedes fake kabel
   for (int i = 0; i < fakeCablesLength; i++) {
@@ -179,9 +184,9 @@ bool allCablesConnected() {
     Serial.print(" - ");
     Serial.println(result);
     if (result == HIGH) {
-      if (timerStarted) {
-        result++;
-      }
+      
+        checksum++;
+      
     }
   }
   //checke deaktivierungskabel
@@ -191,11 +196,11 @@ bool allCablesConnected() {
   Serial.print(" - ");
   Serial.println(result);
   if (result == HIGH) {
-    if (timerStarted) {
-      result++;
-    }
+    
+      checksum++;
+    
   }
-  if (result != 0) {
+  if (checksum != 0) {
 
     return false;
   }
@@ -221,10 +226,7 @@ void readEncoder() {
         currentSelection++;
       }
       //wenn timer schon gestartet kann der encoder als lautstärkeregler verwendet werden
-      else {
-        //erhöhe lautstärke
-        increaseVol();
-      }
+ 
     }
     //wenn position größer als letze
     else if (newPosition > oldPosition) {
@@ -234,9 +236,7 @@ void readEncoder() {
         currentSelection--;
       }
       //veringere Lautstärke
-      else {
-        decreaseVol();
-      }
+
     }
   }
   //limitiere werte die currentselection annehmen kann
@@ -320,9 +320,10 @@ void gameWon() {
 
 //diese funktion reagiert auf drücken des encoders oder des intro buttons
 void readButtons() {
+  //Intro Button Result
   int introRes = digitalRead(introButtonPin);
 
-
+  //encoder Button result
   int encRes = digitalRead(encoderButtonPin);
   long timestamp = millis();
 
@@ -336,7 +337,14 @@ void readButtons() {
     if (!timerStarted && cableState) {
       //eingabe zum timer start mit dem encoder-knopf
       if (encRes == LOW) {
+        showIntroInfo();
+        delay(10);
+        playIntro();
+        delay(35000);
+        playCountdown();
+        delay(2000);
         timerStarted = true;
+        timestamp = millis();
         endTime = timestamp + (minuteValues[currentSelection] * 60000);
         Serial.print("Timer gestartet um: ");
         Serial.print(timestamp);
@@ -344,18 +352,26 @@ void readButtons() {
         Serial.print( minuteValues[currentSelection] );
         Serial.print("Ende: ");
         Serial.println(endTime);
+
       }
       //eingabe zum timer start mit dem Intro knopf
       if (introRes == LOW) {
+        showIntroInfo();
+        delay(10);
+        playIntro();
+        delay(35000);
+        playCountdown();
+        delay(2000);
+        timestamp = millis();
         timerStarted = true;
         endTime = timestamp + (minuteValues[currentSelection] * 60000);
         Serial.print("Timer + Intro abspielen gestartet um: ");
         Serial.print(timestamp);
 
-        playIntro();
+
       }
     }
-    else {
+    else if (timerStarted) {
       //wenn timer schon läuft spielt der intro knopf nur das intro
       if (introRes == LOW) {
         Serial.print(" Intro abspielen gestartet um: ");
@@ -403,12 +419,12 @@ void showDisplay() {
         for (int i = 0; i < minuteValuesLength; i++) {
 
           u8g2.setFont(u8g2_font_ncenB10_tr);
-          u8g2.setCursor(10, 20 + (i * 20));
+          u8g2.setCursor(10, 20 + (i * 15));
           u8g2.print(minuteValues[i]);
 
         }
         //zeichne auswahlpfeil an der richtigen position, basierend auf der currentselection variabel
-        u8g2.setCursor(0, 20 + ( currentSelection * 20));
+        u8g2.setCursor(0, 20 + ( currentSelection * 15));
         u8g2.print(">");
 
         //zeige an, ob die Kabel korrekt verbunden sind
@@ -487,6 +503,9 @@ void playBoom() {
 void playFanfare() {
   myDFPlayer.playFolder(03, 01);
 }
+void playCountdown() {
+  myDFPlayer.playFolder(04, 01);
+}
 
 //diese funktion wird als callback aufgerufen, wenn der drehimpulsgeber bewegt wird
 //sie regelt die interne logik des encoders
@@ -517,16 +536,21 @@ void updateEncoder() {
   // Remember last CLK state
   lastStateCLK = currentStateCLK;
 }
+void showIntroInfo() {
 
+  u8g2.setFont(u8g2_font_ncenB10_tr);
+  u8g2.drawStr(0, 24, "Intro spielt!");
+  u8g2.drawStr(0, 48, "Bitte warten!");
+}
 void showSplash() {
- 
+
   u8g2.setFont(u8g2_font_ncenB10_tr);
   u8g2.drawStr(0, 24, "Bomb!");
   u8g2.drawStr(0, 48, "MM 2023");
 
 }
 void showReset() {
-  
+
   u8g2.setFont(u8g2_font_ncenB10_tr);
   u8g2.drawStr(0, 24, "RESET!");
   u8g2.drawStr(0, 48, "MM 2023");
@@ -539,7 +563,7 @@ void showDFPlayerError() {
     u8g2.drawStr(0, 20 , "ERROR");
     u8g2.setFont(u8g2_font_5x7_tr);
     u8g2.drawStr(0, 30 , "DFPlayer-Problem ");
-    u8g2.drawStr(0, 30 , "Checke SDCard");
+    u8g2.drawStr(0, 50 , "Checke SDCard");
   } while (u8g2.nextPage());
 
 }
